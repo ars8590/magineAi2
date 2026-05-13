@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '../../components/Navbar';
@@ -12,27 +14,26 @@ function GeneratePageContent() {
   const params = useSearchParams();
 
   const [error, setError] = useState<string | null>(null);
-
-  // Progress State
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Initializing...');
+
   const generationStarted = useRef(false);
 
-  const payload: GenerationRequest | null = useMemo(() => {
+  const payload: GenerationRequest = useMemo(() => {
     const age = params.get('age');
     const genre = params.get('genre');
     const theme = params.get('theme');
     const keywords = params.get('keywords') || '';
     const language = params.get('language');
     const pages = params.get('pages');
-    const contentType = (params.get('contentType') as any) || 'story';
+    const contentType = params.get('contentType') as any || 'story';
     const strictModeration = params.get('strictModeration') === 'true';
 
     return {
       age: age ? Number(age) : 18,
       genre: genre || 'General',
       theme: theme || 'Technology',
-      keywords: keywords || '',
+      keywords,
       language: language || 'English',
       pages: pages ? Number(pages) : 10,
       contentType,
@@ -41,11 +42,6 @@ function GeneratePageContent() {
   }, [params]);
 
   useEffect(() => {
-    if (!payload) {
-      setError('Missing generation parameters. Please start again.');
-      return;
-    }
-
     let interval: NodeJS.Timeout;
 
     const startProgress = () => {
@@ -53,52 +49,37 @@ function GeneratePageContent() {
         setProgress((prev) => {
           let increment = 0;
 
-          // 0-5%: Validating
           if (prev < 5) {
             increment = 1;
             setStatusMessage('Validating parameters...');
-          }
-          // 5-15%: Planning
-          else if (prev < 15) {
+          } else if (prev < 15) {
             increment = 0.5;
             setStatusMessage('Planning magazine structure...');
-          }
-          // 15-60%: Generating Story
-          else if (prev < 60) {
+          } else if (prev < 60) {
             increment = 0.2;
             setStatusMessage('Prompting Gemini for creative story...');
-          }
-          // 60-75%: Artwork
-          else if (prev < 75) {
+          } else if (prev < 75) {
             increment = 0.4;
             setStatusMessage('Generating artwork with Imagen...');
-          }
-          // 75-90%: Layout
-          else if (prev < 90) {
+          } else if (prev < 90) {
             increment = 0.5;
             setStatusMessage('Assembling magazine layout...');
-          }
-          // 90-99%: Finalizing
-          else if (prev < 99) {
+          } else if (prev < 99) {
             increment = 0.1;
             setStatusMessage('Finalizing and saving...');
-          } else {
-            increment = 0;
           }
 
-          const next = prev + increment;
-          return next > 99 ? 99 : next;
+          return Math.min(prev + increment, 99);
         });
       }, 200);
     };
 
     const run = async () => {
       try {
-        // Ensure backend session
         const hasSession = await ensureBackendSession();
 
         if (!hasSession) {
-          setError('Authentication required. Please log in.');
+          setError('Authentication required.');
 
           setTimeout(() => {
             router.replace('/login');
@@ -123,12 +104,13 @@ function GeneratePageContent() {
         setTimeout(() => {
           router.replace(`/preview/${id}`);
         }, 800);
+
       } catch (err: any) {
         clearInterval(interval);
 
         setError(
           err?.response?.data?.message ||
-            'Generation failed. Please retry.'
+          'Generation failed. Please retry.'
         );
       }
     };
@@ -146,9 +128,10 @@ function GeneratePageContent() {
 
       <main className="mx-auto flex max-w-3xl flex-col items-center justify-center px-6 py-20 text-center">
         <div className="glass w-full max-w-xl space-y-8 rounded-3xl border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur-md">
+
           {!error ? (
             <div className="flex flex-col items-center gap-6">
-              {/* Progress Bar */}
+
               <div className="w-full space-y-2">
                 <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-primary dark:text-primary-400">
                   <span>Progress</span>
@@ -164,15 +147,16 @@ function GeneratePageContent() {
               </div>
 
               <div className="space-y-2 animate-pulse">
-                <h3 className="text-xl font-bold">{statusMessage}</h3>
+                <h3 className="text-xl font-bold">
+                  {statusMessage}
+                </h3>
 
                 <p className="text-sm text-text-sub-light dark:text-white/60">
                   We are crafting your unique magazine using advanced AI.
                 </p>
               </div>
 
-              {/* Icons */}
-              <div className="mt-4 flex justify-center gap-3 opacity-50">
+              <div className="flex gap-3 justify-center mt-4 opacity-50">
                 <span
                   className="material-symbols-outlined animate-bounce"
                   style={{ animationDelay: '0s' }}
@@ -197,7 +181,7 @@ function GeneratePageContent() {
             </div>
           ) : (
             <>
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
                 <span className="material-symbols-outlined text-3xl">
                   error
                 </span>
@@ -208,14 +192,14 @@ function GeneratePageContent() {
                   Generation Stopped
                 </p>
 
-                <p className="mt-2 text-sm text-text-sub-light dark:text-white/70">
+                <p className="text-sm text-text-sub-light dark:text-white/70 mt-2">
                   {error}
                 </p>
               </div>
 
               <button
                 onClick={() => router.push('/')}
-                className="mt-6 rounded-xl bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/30 transition hover:scale-105 hover:bg-primary/90"
+                className="mt-6 rounded-xl bg-primary px-8 py-3 text-sm font-bold text-white shadow-lg shadow-primary/30 transition hover:bg-primary/90 hover:scale-105"
               >
                 Start Over
               </button>
@@ -229,13 +213,7 @@ function GeneratePageContent() {
 
 export default function GeneratePage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          Loading...
-        </div>
-      }
-    >
+    <Suspense fallback={<div>Loading...</div>}>
       <GeneratePageContent />
     </Suspense>
   );
