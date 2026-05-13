@@ -2,7 +2,8 @@ import axios from 'axios';
 import { AdminModeration, FeedbackPayload, GenerationRequest, GeneratedContent } from '../types';
 
 const api = axios.create({
-  baseURL: '/backend'
+  baseURL:
+    process.env.NEXT_PUBLIC_API_BASE_URL || '/backend'
 });
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
