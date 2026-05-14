@@ -51,7 +51,11 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 
-app.listen(config.port, () => {
-  console.log(`MagineAI API running on port ${config.port}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(config.port, () => {
+    console.log(`MagineAI API running on port ${config.port}`);
+  });
+}
+
+export default app;
 
