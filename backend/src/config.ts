@@ -7,6 +7,8 @@ export const config = {
   supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   geminiApiKey: process.env.GEMINI_API_KEY || '',
   imagenApiKey: process.env.IMAGEN_API_KEY || '',
-  corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((o) => o.trim())
+  corsOrigins: process.env.CORS_ORIGINS === '*' 
+    ? (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => callback(null, true)
+    : (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim().replace(/\/$/, ''))
 };
 
